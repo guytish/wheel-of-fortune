@@ -3,13 +3,13 @@ export type Participant = {
   name: string;
   phone?: string;
   details?: string;
-  donuts: number;
+  donations: number;
 };
 
 export type ChanceResult = {
   id: string;
   name: string;
-  donuts: number;
+  donations: number;
   /** Probability in [0, 1] */
   chance: number;
 };
@@ -19,8 +19,10 @@ export type WheelEntry = {
   name: string;
   phone?: string;
   details?: string;
-  donuts: number;
-  /** Fraction of the wheel this entry occupies (in [0, 1]) */
+  donations: number;
+  /** Visual fraction of the wheel (kept uniform across eligible entries). */
   share: number;
+  /** Probability weight for picking the winner; equal to donations. */
+  weight: number;
   color: string;
 };

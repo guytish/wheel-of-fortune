@@ -2,7 +2,7 @@
  * Password to access the participant management panel.
  * Change this value to update the gate; it is not exposed in the UI.
  */
-export const SETTINGS_PASSWORD = 'donuts123';
+export const SETTINGS_PASSWORD = 'Aa123456';
 
 export const STORAGE_KEY = 'wof:participants:v1';
 

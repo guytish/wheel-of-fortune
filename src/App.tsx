@@ -31,7 +31,6 @@ export default function App() {
     saveParticipants(participants);
   }, [participants]);
 
-  // Cancel any pending spin timer on unmount.
   useEffect(() => {
     return () => {
       if (spinTimerRef.current !== null) {
@@ -45,8 +44,8 @@ export default function App() {
     [participants]
   );
 
-  const totalDonuts = useMemo(
-    () => participants.reduce((s, p) => s + Math.max(0, p.donuts), 0),
+  const totalDonations = useMemo(
+    () => participants.reduce((s, p) => s + Math.max(0, p.donations), 0),
     [participants]
   );
 
@@ -81,57 +80,69 @@ export default function App() {
     }, SPIN_DURATION_MS + 200);
   }
 
-  function openSettingsFlow() {
-    setPwOpen(true);
-  }
-
-  function onPasswordSuccess() {
-    setPwOpen(false);
-    setSettingsOpen(true);
-  }
-
-  let helper: string | null = null;
-  if (participants.length === 0) {
-    helper = 'Open settings (bottom-right) to add participants.';
-  } else if (totalDonuts === 0) {
-    helper =
-      'No donuts logged yet. Add donut counts in settings to enable spinning.';
-  }
+  const helper =
+    participants.length > 0 && totalDonations === 0
+      ? 'No donations logged yet. Add donation amounts in settings to enable spinning.'
+      : null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center px-4 pt-6 pb-28">
-      <h1 className="bg-gradient-to-r from-amber-300 to-pink-400 bg-clip-text text-center text-3xl font-extrabold tracking-tight text-transparent sm:text-5xl">
-        🍩 Donut Wheel of Fortune
-      </h1>
-      <p className="mt-2 mb-6 text-center text-sm text-white/70 sm:text-base">
-        Spin to pick a winner. More donuts = better odds.
-      </p>
+    <div className="relative flex h-svh flex-col overflow-hidden">
+      {/* Title */}
+      <header className="shrink-0 px-4 pt-4 pb-2 sm:pt-6 sm:pb-3">
+        <h1 className="bg-gradient-to-r from-amber-300 to-pink-400 bg-clip-text text-center text-2xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+          Wheel of Fortune
+        </h1>
+      </header>
 
-      <div className="w-full max-w-[560px] px-2">
-        <Wheel
-          entries={entries}
-          rotation={rotation}
-          spinning={spinning}
-          onSpinClick={canSpin ? handleSpin : undefined}
-        />
-      </div>
+      {/* Wheel — fills available space, square, centered */}
+      <main
+        className="grid min-h-0 flex-1 place-items-center"
+        style={{ containerType: 'size' }}
+      >
+        <div
+          className="relative"
+          style={{
+            // Take the smaller of available width/height so the wheel is the
+            // largest square that fits between the header and the bottom controls.
+            width: 'min(calc(100cqw - 1.5rem), calc(100cqh - 1.5rem))',
+            aspectRatio: '1 / 1',
+          }}
+        >
+          <Wheel
+            entries={entries}
+            rotation={rotation}
+            spinning={spinning}
+            onSpinClick={canSpin ? handleSpin : undefined}
+          />
+        </div>
+      </main>
 
+      {/* Reserve space for the fixed bottom controls so the wheel never sits underneath them */}
+      <div className="h-20 shrink-0 sm:h-24" aria-hidden />
+
+      {helper && (
+        <p
+          className="pointer-events-none fixed inset-x-0 bottom-24 z-30 px-4 text-center text-sm text-amber-200/85 sm:bottom-28"
+          role="status"
+        >
+          {helper}
+        </p>
+      )}
+
+      {/* Spin button — bottom-center, aligned vertically with the settings icon */}
       <button
         type="button"
         onClick={handleSpin}
         disabled={!canSpin}
-        className="mt-7 rounded-full bg-gradient-to-b from-pink-400 to-pink-600 px-12 py-3.5 text-lg font-extrabold tracking-[3px] shadow-[0_8px_22px_rgba(233,78,133,.5)] transition enabled:hover:-translate-y-0.5 enabled:hover:brightness-110 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+        className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2 rounded-full bg-gradient-to-b from-pink-400 to-pink-600 px-10 py-3.5 text-lg font-extrabold tracking-[3px] shadow-[0_8px_22px_rgba(233,78,133,.5)] transition-[filter,opacity] enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:px-12"
       >
         {spinning ? 'SPINNING…' : 'SPIN'}
       </button>
 
-      {helper && (
-        <p className="mt-4 max-w-md text-center text-sm text-amber-200/80">{helper}</p>
-      )}
-
+      {/* Settings */}
       <button
         type="button"
-        onClick={openSettingsFlow}
+        onClick={() => setPwOpen(true)}
         className="fixed right-5 bottom-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl backdrop-blur-md transition-all duration-300 hover:rotate-90 hover:bg-white/20"
         aria-label="Open settings"
         title="Settings"
@@ -142,7 +153,10 @@ export default function App() {
       <PasswordModal
         open={pwOpen}
         onClose={() => setPwOpen(false)}
-        onSuccess={onPasswordSuccess}
+        onSuccess={() => {
+          setPwOpen(false);
+          setSettingsOpen(true);
+        }}
       />
 
       <SettingsPanel
@@ -159,9 +173,6 @@ export default function App() {
           <div className="my-4 break-words bg-gradient-to-r from-amber-300 to-pink-400 bg-clip-text text-4xl leading-tight font-extrabold text-transparent sm:text-5xl">
             {winner?.name || '(unnamed)'}
           </div>
-          <p className="mb-1 text-white/80">
-            🍩 {winner?.donuts ?? 0} donut{winner?.donuts === 1 ? '' : 's'}
-          </p>
           {winner?.phone && (
             <p className="text-sm text-white/70">📞 {winner.phone}</p>
           )}

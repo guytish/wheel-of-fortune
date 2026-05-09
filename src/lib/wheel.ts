@@ -1,43 +1,49 @@
 import { MIN_FULL_SPINS } from '../constants';
 import type { ChanceResult, Participant, WheelEntry } from '../types';
 
-/** Per-participant winning probability, including those with zero donuts (chance = 0). */
+/** Per-participant winning probability, including those with zero donations (chance = 0). */
 export function calculateChances(participants: Participant[]): ChanceResult[] {
-  const total = participants.reduce((sum, p) => sum + Math.max(0, p.donuts), 0);
+  const total = participants.reduce((sum, p) => sum + Math.max(0, p.donations), 0);
   return participants.map((p) => ({
     id: p.id,
     name: p.name,
-    donuts: p.donuts,
-    chance: total > 0 ? Math.max(0, p.donuts) / total : 0,
+    donations: p.donations,
+    chance: total > 0 ? Math.max(0, p.donations) / total : 0,
   }));
 }
 
-/** Wheel segments: only participants with > 0 donuts; each share is the fraction of total donuts. */
+/**
+ * Wheel segments: only participants with > 0 donations.
+ * Each segment is the same visual size; the donation amount is kept as a
+ * probability weight on the side so picking is still weighted.
+ */
 export function buildWheelEntries(
   participants: Participant[],
   colors: readonly string[]
 ): WheelEntry[] {
-  const eligible = participants.filter((p) => Math.max(0, p.donuts) > 0);
-  const total = eligible.reduce((sum, p) => sum + p.donuts, 0);
-  if (total === 0) return [];
+  const eligible = participants.filter((p) => Math.max(0, p.donations) > 0);
+  if (eligible.length === 0) return [];
+  const equalShare = 1 / eligible.length;
   return eligible.map((p, i) => ({
     id: p.id,
     name: p.name,
     phone: p.phone,
     details: p.details,
-    donuts: p.donuts,
-    share: p.donuts / total,
+    donations: p.donations,
+    share: equalShare,
+    weight: p.donations,
     color: colors[i % colors.length],
   }));
 }
 
-/** Picks a winner index using the entries' shares as weights. */
+/** Picks a winner index using donation amounts as weights. */
 export function pickWeightedIndex(entries: WheelEntry[]): number {
   if (entries.length === 0) return -1;
-  const total = entries.reduce((sum, e) => sum + e.share, 0);
+  const total = entries.reduce((sum, e) => sum + e.weight, 0);
+  if (total <= 0) return -1;
   let r = Math.random() * total;
   for (let i = 0; i < entries.length; i++) {
-    r -= entries[i].share;
+    r -= entries[i].weight;
     if (r <= 0) return i;
   }
   return entries.length - 1;

@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { Modal } from './Modal';
 import type { Participant } from '../types';
-import { exportToFile, parseImport } from '../lib/io';
+import { exportToCsvFile, exportToJsonFile, parseImport } from '../lib/io';
 import { calculateChances } from '../lib/wheel';
 
 type Props = {
@@ -46,7 +46,7 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
   function add() {
     onChange([
       ...participants,
-      { id: uid(), name: '', phone: '', details: '', donuts: 0 },
+      { id: uid(), name: '', phone: '', details: '', donations: 0 },
     ]);
   }
 
@@ -57,14 +57,18 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
     onToast('success', 'All participants cleared.');
   }
 
-  function doExport() {
+  function doExport(format: 'csv' | 'json') {
     if (participants.length === 0) {
       onToast('error', 'Nothing to export.');
       return;
     }
     try {
-      exportToFile(participants);
-      onToast('success', `Exported ${participants.length} participants.`);
+      if (format === 'csv') exportToCsvFile(participants);
+      else exportToJsonFile(participants);
+      onToast(
+        'success',
+        `Exported ${participants.length} participant${participants.length === 1 ? '' : 's'} as ${format.toUpperCase()}.`
+      );
     } catch {
       onToast('error', 'Export failed.');
     }
@@ -80,7 +84,7 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
     if (!file) return;
     try {
       const text = await file.text();
-      const result = parseImport(text);
+      const result = parseImport(text, file.name);
       if (!result.ok) {
         onToast('error', result.error);
         return;
@@ -106,7 +110,7 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
   return (
     <Modal open={open} onClose={onClose} title="Participants">
       <p className="mb-4 text-sm text-white/65">
-        Manage everyone on the wheel. Each donut counts toward the win chance.
+        Manage everyone on the wheel. The donation amount weights the win chance.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -126,10 +130,17 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
         </button>
         <button
           type="button"
-          onClick={doExport}
+          onClick={() => doExport('csv')}
           className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 transition hover:bg-white/20"
         >
-          Export
+          Export CSV
+        </button>
+        <button
+          type="button"
+          onClick={() => doExport('json')}
+          className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 transition hover:bg-white/20"
+        >
+          Export JSON
         </button>
         <button
           type="button"
@@ -149,7 +160,7 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/json"
+          accept=".json,.csv,application/json,text/csv"
           onChange={onFile}
           className="hidden"
         />
@@ -167,7 +178,7 @@ export function SettingsPanel({ open, onClose, participants, onChange, onToast }
                 <Th>Name *</Th>
                 <Th>Phone</Th>
                 <Th>Details</Th>
-                <Th>Donuts *</Th>
+                <Th>Donations *</Th>
                 {showChances && <Th>Chance</Th>}
                 <Th aria-label="Actions" />
               </tr>
@@ -247,18 +258,18 @@ function Row({ participant, chance, showChance, onChange, onRemove }: RowProps) 
           type="number"
           min={0}
           step={1}
-          value={participant.donuts}
+          value={participant.donations}
           onChange={(e) => {
             const raw = e.target.value;
             if (raw === '') {
-              onChange({ donuts: 0 });
+              onChange({ donations: 0 });
               return;
             }
             const n = Number(raw);
             if (!Number.isFinite(n)) return;
-            onChange({ donuts: Math.max(0, Math.floor(n)) });
+            onChange({ donations: Math.max(0, Math.floor(n)) });
           }}
-          aria-label="Donuts completed"
+          aria-label="Donations"
           className={`${cellInput} max-w-24`}
         />
       </td>
